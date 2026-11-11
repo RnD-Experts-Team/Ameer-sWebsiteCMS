@@ -87,7 +87,6 @@ return [
     */
 
     'contact' => [
-        'max_per_hour_per_ip' => 5,
         'duplicate_window_hours' => 24,
     ],
 
@@ -96,9 +95,8 @@ return [
     | Trusted Proxies
     |--------------------------------------------------------------------------
     |
-    | The contact form is posted by the Next.js server, not the browser.
-    | Trust its address (comma separated, or "*") and have it forward
-    | X-Forwarded-For so the hourly limit counts each visitor's own IP.
+    | Reverse proxies (comma separated, or "*") whose X-Forwarded-* headers
+    | are trusted, so Laravel sees https when it sits behind nginx.
     |
     */
 

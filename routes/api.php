@@ -37,5 +37,6 @@ Route::name('api.')->group(function () {
         Route::get('reviews', ReviewController::class)->name('reviews');
     });
 
-    Route::post('contact', ContactController::class)->middleware('throttle:contact')->name('contact');
+    // No rate limit: Cloudflare Turnstile (verified in ContactController) is the spam protection.
+    Route::post('contact', ContactController::class)->name('contact');
 });

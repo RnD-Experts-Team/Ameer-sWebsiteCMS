@@ -1,0 +1,58 @@
+# Ameer's CMS: cms.ameersconstruction.com
+#
+#   cp .env.production.example .env   (then fill it in)
+#   docker compose up -d --build
+#
+# Only localhost can reach the container; nginx is the public entrance.
+# Check the port is free first: ss -ltnp | grep 4402
+
+name: ameers-cms
+
+x-app: &app
+  image: ameers-cms:latest
+  restart: unless-stopped
+  volumes:
+    - ./.env:/var/www/html/.env:ro
+    # uploads (storage/app/public), the SQLite database (storage/database), sessions, cache
+    - cms_storage:/var/www/html/storage
+
+services:
+  web:
+    <<: *app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ameers-cms
+    ports:
+      - "127.0.0.1:4402:80"
+    environment:
+      RUN_SETUP: "true"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # Sends the contact-form emails. Without it they wait in the queue forever.
+  queue:
+    <<: *app
+    container_name: ameers-cms-queue
+    user: www-data
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    depends_on:
+      web:
+        condition: service_healthy
+
+  # Runs the daily trash clean-up (model:prune).
+  scheduler:
+    <<: *app
+    container_name: ameers-cms-scheduler
+    user: www-data
+    command: php artisan schedule:work
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  cms_storage:

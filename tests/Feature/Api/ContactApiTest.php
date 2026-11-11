@@ -102,14 +102,14 @@ test('a repeated request is rejected', function () {
     expect(ContactRequest::query()->count())->toBe(1);
 });
 
-test('each visitor ip can send five requests an hour', function () {
+test('there is no per-ip limit, the human check is the protection', function () {
     Http::fake([TurnstileVerifier::VerifyUrl => Http::response(['success' => true])]);
 
-    foreach (range(1, 5) as $attempt) {
-        $this->postJson('/api/v1/contact', contactPayload(['message' => "Request number {$attempt}"]))->assertOk();
+    foreach (range(1, 8) as $attempt) {
+        $this->postJson('/api/v1/contact', contactPayload(['message' => "Request number {$attempt}"]))
+            ->assertOk()
+            ->assertJsonPath('ok', true);
     }
 
-    $this->postJson('/api/v1/contact', contactPayload(['message' => 'One too many']))
-        ->assertOk()
-        ->assertJsonPath('ok', false);
+    expect(ContactRequest::query()->count())->toBe(8);
 });
