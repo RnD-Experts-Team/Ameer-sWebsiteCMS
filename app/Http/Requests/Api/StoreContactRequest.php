@@ -27,7 +27,7 @@ class StoreContactRequest extends FormRequest
             }],
             'email' => ['required', 'string', 'email', 'max:254'],
             'projectType' => ['nullable', 'string', 'max:60'],
-            'address' => ['nullable', 'string', 'max:120'],
+            'address' => ['required', 'string', 'min:5', 'max:120'],
             'message' => ['required', 'string', 'min:5', 'max:3000'],
             'humanToken' => ['required', 'string', 'max:4096'],
         ];
@@ -43,6 +43,7 @@ class StoreContactRequest extends FormRequest
         return [
             'name.*' => 'Please enter your full name.',
             'email.*' => 'Please enter a valid email address.',
+            'address.*' => 'Please enter the project address or ZIP code.',
             'message.*' => 'Please tell us a little more about your project.',
             'humanToken.*' => 'Please confirm you are human and try again.',
         ];

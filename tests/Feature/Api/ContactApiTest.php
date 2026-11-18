@@ -88,6 +88,8 @@ test('invalid input returns one short message', function (array $overrides) {
     'invalid email' => [['email' => 'not-an-email']],
     'short message' => [['message' => 'Hi']],
     'missing human token' => [['humanToken' => '']],
+    'address missing' => [['address' => null]],
+    'address too short' => [['address' => '12']],
     'message too long' => [['message' => str_repeat('a', 3001)]],
 ]);
 
@@ -112,4 +114,32 @@ test('there is no per-ip limit, the human check is the protection', function () 
     }
 
     expect(ContactRequest::query()->count())->toBe(8);
+});
+
+test('a missing or short address returns the address message', function (?string $address) {
+    Http::fake([TurnstileVerifier::VerifyUrl => Http::response(['success' => true])]);
+
+    $this->postJson('/api/v1/contact', contactPayload(['address' => $address]))
+        ->assertOk()
+        ->assertExactJson(['ok' => false, 'error' => 'Please enter the project address or ZIP code.']);
+
+    expect(ContactRequest::query()->count())->toBe(0);
+})->with([null, '12']);
+
+test('the site email is used when there are no notification emails', function () {
+    Http::fake([TurnstileVerifier::VerifyUrl => Http::response(['success' => true])]);
+    Setting::for(Setting::Site)->update(['value' => [...DefaultContent::site(), 'notificationEmails' => [], 'email' => 'homeameer62@gmail.com']]);
+
+    $this->postJson('/api/v1/contact', contactPayload())->assertOk()->assertExactJson(['ok' => true]);
+
+    Mail::assertQueued(ContactRequestReceived::class, fn (ContactRequestReceived $mail) => $mail->hasTo('homeameer62@gmail.com'));
+});
+
+test('a mail failure never loses the request or shows an error', function () {
+    Http::fake([TurnstileVerifier::VerifyUrl => Http::response(['success' => true])]);
+    Mail::shouldReceive('to')->andThrow(new RuntimeException('SMTP down'));
+
+    $this->postJson('/api/v1/contact', contactPayload())->assertOk()->assertExactJson(['ok' => true]);
+
+    expect(ContactRequest::query()->count())->toBe(1);
 });
